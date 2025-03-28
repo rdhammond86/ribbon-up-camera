@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Camera, Loader2 } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, Upload } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { 
   requestSignedUrl, 
@@ -15,6 +15,7 @@ import {
 const CameraView = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -155,6 +156,41 @@ const CameraView = () => {
     }
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (result) {
+        setCapturedImage(result);
+        
+        // Save to localStorage (temporary solution)
+        const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
+        savedImages.push(result);
+        localStorage.setItem('carImages', JSON.stringify(savedImages));
+
+        toast({
+          title: "Image Selected",
+          description: "Your image has been loaded successfully!",
+        });
+      }
+    };
+    reader.onerror = () => {
+      toast({
+        title: "Error",
+        description: "Failed to read the selected file.",
+        variant: "destructive",
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleSaveAndExit = () => {
     if (capturedImage) {
       // Here you could add more logic for saving if needed
@@ -199,6 +235,15 @@ const CameraView = () => {
         )}
         
         <canvas ref={canvasRef} className="hidden"></canvas>
+        
+        {/* Hidden file input */}
+        <input 
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          accept="image/*"
+          onChange={handleFileUpload}
+        />
       </div>
 
       {/* Upload Progress */}
@@ -216,14 +261,25 @@ const CameraView = () => {
       {/* Controls - Positioned below camera view */}
       <div className="p-6 flex flex-col items-center space-y-4">
         {!capturedImage ? (
-          <Button 
-            onClick={capturePhoto} 
-            className="rounded-full h-16 w-16 flex items-center justify-center bg-white border-4 border-black"
-          >
-            <div className="rounded-full h-12 w-12 bg-black flex items-center justify-center">
-              <Camera className="h-6 w-6 text-white" />
-            </div>
-          </Button>
+          <div className="flex items-center space-x-4">
+            <Button 
+              onClick={handleUploadButtonClick}
+              className="rounded-full h-16 w-16 flex items-center justify-center bg-white border-4 border-black"
+            >
+              <div className="rounded-full h-12 w-12 bg-black flex items-center justify-center">
+                <Upload className="h-6 w-6 text-white" />
+              </div>
+            </Button>
+            
+            <Button 
+              onClick={capturePhoto} 
+              className="rounded-full h-16 w-16 flex items-center justify-center bg-white border-4 border-black"
+            >
+              <div className="rounded-full h-12 w-12 bg-black flex items-center justify-center">
+                <Camera className="h-6 w-6 text-white" />
+              </div>
+            </Button>
+          </div>
         ) : (
           <div className="flex flex-col items-center space-y-4 w-full">
             <div className="flex justify-center space-x-4 w-full">
