@@ -3,8 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, AlertCircle } from 'lucide-react';
 import { pollForResult } from '@/services/awsService';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const ResultView = () => {
   const location = useLocation();
@@ -12,6 +13,7 @@ const ResultView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null);
   const [pollingCount, setPollingCount] = useState(0);
+  const [timeoutError, setTimeoutError] = useState(false);
   
   // Get state passed from CameraView
   const { imageId, originalImage } = location.state || {};
@@ -28,6 +30,17 @@ const ResultView = () => {
     }
 
     console.log("Starting to poll for image with ID:", imageId);
+    
+    // Setup timeout for 20 seconds
+    const timeoutId = setTimeout(() => {
+      setTimeoutError(true);
+      setIsLoading(false);
+      toast({
+        title: "Processing Timeout",
+        description: "Ryan's code is too slow. Please try again later.",
+        variant: "destructive",
+      });
+    }, 20000); // 20 seconds
 
     const checkResult = async () => {
       try {
@@ -36,6 +49,7 @@ const ResultView = () => {
         const result = await pollForResult(imageId);
         
         if (result) {
+          clearTimeout(timeoutId); // Clear the timeout if we get a result
           console.log("Received processed image URL:", result);
           setProcessedImageUrl(result);
           setIsLoading(false);
@@ -47,6 +61,7 @@ const ResultView = () => {
           // For demo purposes, after a few polling attempts, 
           // just use the original image as the "processed" result
           if (pollingCount >= 2) {
+            clearTimeout(timeoutId); // Clear the timeout if we stop polling
             console.log("Max polling attempts reached, using original image");
             setProcessedImageUrl(originalImage);
             setIsLoading(false);
@@ -60,6 +75,7 @@ const ResultView = () => {
           }
         }
       } catch (error) {
+        clearTimeout(timeoutId); // Clear the timeout on error
         console.error("Error checking result:", error);
         toast({
           title: "Error",
@@ -73,6 +89,7 @@ const ResultView = () => {
     const pollingInterval = setInterval(checkResult, 3000);
 
     return () => {
+      clearTimeout(timeoutId); // Clear the timeout on cleanup
       clearInterval(pollingInterval);
     };
   }, [imageId, navigate, pollingCount, originalImage]);
@@ -117,6 +134,23 @@ const ResultView = () => {
           <div className="flex flex-col items-center">
             <Loader2 className="h-12 w-12 animate-spin mb-4" />
             <p className="text-lg">Processing your image...</p>
+          </div>
+        ) : timeoutError ? (
+          <div className="w-full max-w-md">
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-5 w-5" />
+              <AlertTitle>Processing Failed</AlertTitle>
+              <AlertDescription>
+                Ryan's code is too slow. Please try again later or try with a different image.
+              </AlertDescription>
+            </Alert>
+            
+            <Button 
+              onClick={() => navigate('/camera')}
+              className="w-full"
+            >
+              Take Another Photo
+            </Button>
           </div>
         ) : (
           <>
