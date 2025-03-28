@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -26,12 +27,16 @@ const ResultView = () => {
       return;
     }
 
+    console.log("Starting to poll for image with ID:", imageId);
+
     const checkResult = async () => {
       try {
         // Poll for the result using the image ID
+        console.log(`Polling attempt ${pollingCount + 1} for image ${imageId}`);
         const result = await pollForResult(imageId);
         
         if (result) {
+          console.log("Received processed image URL:", result);
           setProcessedImageUrl(result);
           setIsLoading(false);
           toast({
@@ -42,6 +47,7 @@ const ResultView = () => {
           // For demo purposes, after a few polling attempts, 
           // just use the original image as the "processed" result
           if (pollingCount >= 2) {
+            console.log("Max polling attempts reached, using original image");
             setProcessedImageUrl(originalImage);
             setIsLoading(false);
             toast({
@@ -49,6 +55,7 @@ const ResultView = () => {
               description: "Your image has been processed!",
             });
           } else {
+            console.log(`No result yet, incrementing polling count to ${pollingCount + 1}`);
             setPollingCount(prev => prev + 1);
           }
         }
