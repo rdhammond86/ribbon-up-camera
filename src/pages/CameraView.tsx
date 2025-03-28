@@ -8,7 +8,8 @@ import { Progress } from '@/components/ui/progress';
 import { 
   requestSignedUrl, 
   uploadToSignedUrl, 
-  dataURLToBlob 
+  dataURLToBlob,
+  getFileTypeFromDataURL
 } from '@/services/awsService';
 
 const CameraView = () => {
@@ -18,7 +19,7 @@ const CameraView = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [resultLocation, setResultLocation] = useState<string | null>(null);
+  const [imageId, setImageId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -101,23 +102,28 @@ const CameraView = () => {
     setUploadProgress(10);
 
     try {
+      // Get file type from data URL
+      const fileType = getFileTypeFromDataURL(capturedImage);
+      // Generate a random file name
+      const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
+      
       // Step 1: Request signed URL
-      const response = await requestSignedUrl();
+      const response = await requestSignedUrl(fileName, fileType);
       setUploadProgress(30);
+      setImageId(response.imageId);
       
       // Step 2: Upload image to signed URL
       const imageBlob = dataURLToBlob(capturedImage);
       const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
       setUploadProgress(70);
       
-      if (uploadSuccess) {
-        setResultLocation(response.resultLocation);
+      if (uploadSuccess && response.imageId) {
         setUploadProgress(100);
         
-        // Navigate to result page with the result location
+        // Navigate to result page with the image ID
         navigate('/result', { 
           state: { 
-            resultLocation: response.resultLocation,
+            imageId: response.imageId,
             originalImage: capturedImage 
           } 
         });

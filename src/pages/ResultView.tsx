@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -14,13 +13,13 @@ const ResultView = () => {
   const [pollingCount, setPollingCount] = useState(0);
   
   // Get state passed from CameraView
-  const { resultLocation, originalImage } = location.state || {};
+  const { imageId, originalImage } = location.state || {};
 
   useEffect(() => {
-    if (!resultLocation) {
+    if (!imageId) {
       toast({
         title: "Error",
-        description: "No result location provided",
+        description: "No image ID provided",
         variant: "destructive",
       });
       navigate('/');
@@ -29,8 +28,8 @@ const ResultView = () => {
 
     const checkResult = async () => {
       try {
-        // Poll for the result
-        const result = await pollForResult(resultLocation);
+        // Poll for the result using the image ID
+        const result = await pollForResult(imageId);
         
         if (result) {
           setProcessedImageUrl(result);
@@ -69,7 +68,7 @@ const ResultView = () => {
     return () => {
       clearInterval(pollingInterval);
     };
-  }, [resultLocation, navigate, pollingCount, originalImage]);
+  }, [imageId, navigate, pollingCount, originalImage]);
 
   const handleBack = () => {
     navigate('/camera');
