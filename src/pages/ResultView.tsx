@@ -31,10 +31,15 @@ const ResultView = () => {
 
     console.log("Starting to poll for image with ID:", imageId);
     
+    // Setup polling interval reference to clear it on timeout
+    let pollingInterval: NodeJS.Timeout;
+    
     // Setup timeout for 20 seconds
     const timeoutId = setTimeout(() => {
       setTimeoutError(true);
       setIsLoading(false);
+      // Clear the polling interval when timeout occurs
+      clearInterval(pollingInterval);
       toast({
         title: "Processing Timeout",
         description: "Ryan's code is too slow. Please try again later.",
@@ -76,6 +81,7 @@ const ResultView = () => {
         }
       } catch (error) {
         clearTimeout(timeoutId); // Clear the timeout on error
+        clearInterval(pollingInterval); // Also clear polling interval on error
         console.error("Error checking result:", error);
         toast({
           title: "Error",
@@ -86,11 +92,12 @@ const ResultView = () => {
       }
     };
 
-    const pollingInterval = setInterval(checkResult, 3000);
+    // Set up polling and store the interval ID
+    pollingInterval = setInterval(checkResult, 3000);
 
     return () => {
       clearTimeout(timeoutId); // Clear the timeout on cleanup
-      clearInterval(pollingInterval);
+      clearInterval(pollingInterval); // Clear the polling interval on cleanup
     };
   }, [imageId, navigate, pollingCount, originalImage]);
 
