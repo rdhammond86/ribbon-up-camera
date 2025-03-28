@@ -5,7 +5,7 @@ import cameraAnimation from '/e2be8d6a1168ca901ca3a329417a9f323d2b841f.mp4.lotti
 
 const CameraIcon: React.FC = () => {
   return (
-    <div className="w-56 h-56 mx-auto mb-10">
+    <div className="w-full h-[40vh] mx-auto">
       <Lottie 
         animationData={cameraAnimation} 
         loop={true}

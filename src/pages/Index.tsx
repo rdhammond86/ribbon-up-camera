@@ -1,23 +1,32 @@
+
 import React from 'react';
 import CameraIcon from '@/components/CameraIcon';
 import CameraButton from '@/components/CameraButton';
+
 const Index = () => {
-  return <div className="min-h-screen flex flex-col justify-center items-center p-6 bg-[#fffbe2]">
-      <div className="w-full max-w-md mx-auto text-center">
+  return (
+    <div className="min-h-screen flex flex-col bg-[#fffbe2]">
+      <div className="w-full flex-grow-0 flex-shrink-0">
         <CameraIcon />
-        
-        <h1 className="text-4xl font-bold mb-6 text-gray-900">Ribbon Up Your Car</h1>
-        
-        <p className="text-lg mb-12 text-gray-800">Time for some Motorway Magic, give your car the touch of class it deserves</p>
-        
-        <div className="space-y-4">
-          <CameraButton text="Ribbon up my car" />
+      </div>
+      
+      <div className="flex-1 flex flex-col justify-center items-center p-6">
+        <div className="w-full max-w-md mx-auto text-center">
+          <h1 className="text-4xl font-bold mb-6 text-gray-900">Ribbon Up Your Car</h1>
           
-          <button className="text-gray-600 font-medium py-2 px-4 w-full text-center">
-            Skip for now
-          </button>
+          <p className="text-lg mb-12 text-gray-800">Time for some Motorway Magic, give your car the touch of class it deserves</p>
+          
+          <div className="space-y-4">
+            <CameraButton text="Ribbon up my car" />
+            
+            <button className="text-gray-600 font-medium py-2 px-4 w-full text-center">
+              Skip for now
+            </button>
+          </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
