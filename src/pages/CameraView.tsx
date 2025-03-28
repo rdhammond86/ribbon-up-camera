@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Camera, Loader2, Upload } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, Upload, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { 
   requestSignedUrl, 
@@ -21,38 +21,44 @@ const CameraView = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imageId, setImageId] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const startCamera = async () => {
-      try {
-        // Request high-resolution camera stream
-        const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            aspectRatio: { ideal: 16/9 },
-            frameRate: { ideal: 30 }
-          }, 
-          audio: false 
-        });
-        
-        setStream(mediaStream);
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
-      } catch (error) {
-        console.error("Error accessing camera:", error);
-        toast({
-          title: "Camera Error",
-          description: "Could not access your camera. Please check permissions.",
-          variant: "destructive",
-        });
+  const startCamera = async () => {
+    try {
+      // Stop any existing stream
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
       }
-    };
 
+      // Request high-resolution camera stream with current facingMode
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: facingMode,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          aspectRatio: { ideal: 16/9 },
+          frameRate: { ideal: 30 }
+        }, 
+        audio: false 
+      });
+      
+      setStream(mediaStream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+      toast({
+        title: "Camera Error",
+        description: "Could not access your camera. Please check permissions.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
     startCamera();
 
     // Cleanup function to stop camera when component unmounts
@@ -61,7 +67,11 @@ const CameraView = () => {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [facingMode]); // Restart camera when facingMode changes
+
+  const switchCamera = () => {
+    setFacingMode(prevMode => prevMode === "user" ? "environment" : "user");
+  };
 
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
@@ -251,6 +261,17 @@ const CameraView = () => {
           accept="image/*"
           onChange={handleFileUpload}
         />
+
+        {/* Camera switch button - only show when camera is active */}
+        {!capturedImage && (
+          <Button 
+            onClick={switchCamera}
+            className="absolute top-4 right-4 rounded-full h-12 w-12 bg-black/30 backdrop-blur-sm hover:bg-black/50"
+            size="icon"
+          >
+            <RefreshCw className="h-6 w-6 text-white" />
+          </Button>
+        )}
       </div>
 
       {/* Upload Progress */}
