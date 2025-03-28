@@ -26,8 +26,15 @@ const CameraView = () => {
   useEffect(() => {
     const startCamera = async () => {
       try {
+        // Request high-resolution camera stream
         const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "environment" }, 
+          video: { 
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            aspectRatio: { ideal: 16/9 },
+            frameRate: { ideal: 30 }
+          }, 
           audio: false 
         });
         
@@ -69,8 +76,8 @@ const CameraView = () => {
       // Draw the current video frame on the canvas
       context?.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Convert canvas to data URL and set as captured image
-      const imageDataUrl = canvas.toDataURL('image/png');
+      // Convert canvas to data URL with high quality (1.0)
+      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
       setCapturedImage(imageDataUrl);
 
       // Save to localStorage (temporary solution)
