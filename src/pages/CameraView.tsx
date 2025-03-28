@@ -108,28 +108,40 @@ const CameraView = () => {
       const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
       
       // Step 1: Request signed URL
+      setUploadProgress(20);
+      console.log(`Requesting signed URL for ${fileName}, type ${fileType}`);
       const response = await requestSignedUrl(fileName, fileType);
-      setUploadProgress(30);
+      console.log("Received signed URL response:", response);
+      setUploadProgress(40);
+      
+      if (!response || !response.signedUrl || !response.imageId) {
+        throw new Error("Invalid response from server");
+      }
+      
       setImageId(response.imageId);
       
       // Step 2: Upload image to signed URL
       const imageBlob = dataURLToBlob(capturedImage);
-      const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
-      setUploadProgress(70);
+      console.log(`Uploading image blob: size ${imageBlob.size}, type ${imageBlob.type}`);
+      setUploadProgress(60);
       
-      if (uploadSuccess && response.imageId) {
-        setUploadProgress(100);
-        
-        // Navigate to result page with the image ID
-        navigate('/result', { 
-          state: { 
-            imageId: response.imageId,
-            originalImage: capturedImage 
-          } 
-        });
-      } else {
+      const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
+      setUploadProgress(80);
+      
+      if (!uploadSuccess) {
         throw new Error("Upload failed");
       }
+      
+      setUploadProgress(100);
+      
+      // Navigate to result page with the image ID
+      navigate('/result', { 
+        state: { 
+          imageId: response.imageId,
+          originalImage: capturedImage 
+        } 
+      });
+      
     } catch (error) {
       console.error("Error in upload process:", error);
       toast({

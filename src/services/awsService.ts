@@ -27,14 +27,19 @@ const requestSignedUrl = async (fileName: string, fileType: string): Promise<Sig
     console.log("Requesting signed URL:", url);
     
     const response = await fetch(url, {
-      method: 'GET',  // Changed to GET to avoid preflight requests
+      method: 'GET',  // Using GET to avoid preflight requests
     });
     
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed to get signed URL. Status: ${response.status}, Response: ${errorText}`);
       throw new Error(`Failed to get signed URL: ${response.status}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    console.log("Signed URL response:", data);
+    
+    return data;
   } catch (error) {
     console.error('Error requesting signed URL:', error);
     throw error;
@@ -44,6 +49,9 @@ const requestSignedUrl = async (fileName: string, fileType: string): Promise<Sig
 // Upload image to the signed URL
 const uploadToSignedUrl = async (signedUrl: string, imageBlob: Blob): Promise<boolean> => {
   try {
+    console.log("Uploading to signed URL:", signedUrl);
+    console.log("Image blob type:", imageBlob.type, "size:", imageBlob.size);
+    
     const response = await fetch(signedUrl, {
       method: 'PUT',
       body: imageBlob,
@@ -52,7 +60,14 @@ const uploadToSignedUrl = async (signedUrl: string, imageBlob: Blob): Promise<bo
       },
     });
     
-    return response.ok;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed to upload image. Status: ${response.status}, Response: ${errorText}`);
+      return false;
+    }
+    
+    console.log("Upload successful");
+    return true;
   } catch (error) {
     console.error('Error uploading image:', error);
     return false;
