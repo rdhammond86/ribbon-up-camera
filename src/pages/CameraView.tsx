@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,9 @@ const CameraView = () => {
       
       // Stop any existing stream
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(track => {
+          track.stop();
+        });
         setStream(null);
       }
 
@@ -41,19 +42,13 @@ const CameraView = () => {
       }
 
       // Small delay to ensure previous stream is fully stopped
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       console.log(`Attempting to start camera with facingMode: ${facingMode}`);
       
-      // Request high-resolution camera stream with current facingMode
+      // Use a simpler camera configuration - focusing on making switching work
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: facingMode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          aspectRatio: { ideal: 16/9 },
-          frameRate: { ideal: 30 }
-        }, 
+        video: { facingMode: facingMode }, 
         audio: false 
       });
       
@@ -62,9 +57,6 @@ const CameraView = () => {
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        videoRef.current.onloadedmetadata = () => {
-          console.log(`Video dimensions: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`);
-        };
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
@@ -89,7 +81,7 @@ const CameraView = () => {
     };
   }, [facingMode]); // Restart camera when facingMode changes
 
-  const switchCamera = async () => {
+  const switchCamera = () => {
     if (isSwitchingCamera) return;
     
     toast({
