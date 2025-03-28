@@ -8,16 +8,25 @@ interface SignedUrlResponse {
   resultLocation: string;
 }
 
-// Mock API for demonstration - replace with actual API call
+// Request a signed URL for uploading images
 const requestSignedUrl = async (): Promise<SignedUrlResponse> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Mock response
-  return {
-    signedUrl: "https://example-bucket.s3.amazonaws.com/uploads/image-123.jpg?AWSAccessKeyId=EXAMPLEKEY&Signature=EXAMPLESIGNATURE&Expires=1696969696",
-    resultLocation: "/api/processing-results/image-123"
-  };
+  try {
+    const response = await fetch("https://bnoimgx3f4wrhldyehi43rohce0gngog.lambda-url.eu-west-1.on.aws/", {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get signed URL: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error requesting signed URL:', error);
+    throw error;
+  }
 };
 
 // Upload image to the signed URL
@@ -48,8 +57,8 @@ const pollForResult = async (
   
   while (attempts < maxAttempts) {
     try {
-      // In a real implementation, this would check if the processing is complete
-      const response = await fetch(`https://api.example.com${resultLocation}`);
+      // Use the result location URL directly
+      const response = await fetch(resultLocation);
       
       if (response.ok) {
         const data = await response.json();
