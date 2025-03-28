@@ -20,9 +20,10 @@ const BASE_URL = "https://heyv52hm6lidlkp2c2j3jcpdmi0aeuep.lambda-url.eu-west-1.
 const requestSignedUrl = async (fileName: string, fileType: string): Promise<SignedUrlResponse> => {
   try {
     // Using URL parameters instead of JSON body to avoid CORS preflight request
+    // Changed parameter name from fileName to imageName as required by the server
     const encodedFileName = encodeURIComponent(fileName);
     const encodedFileType = encodeURIComponent(fileType);
-    const url = `${BASE_URL}/upload?fileName=${encodedFileName}&fileType=${encodedFileType}`;
+    const url = `${BASE_URL}/upload?imageName=${encodedFileName}&fileType=${encodedFileType}`;
     
     console.log("Requesting signed URL:", url);
     
