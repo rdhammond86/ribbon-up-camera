@@ -195,26 +195,9 @@ const CameraView = () => {
         </div>
       )}
 
-      {/* Controls */}
-      <div className="p-6 flex justify-center space-x-4">
-        {capturedImage ? (
-          <>
-            <Button 
-              onClick={() => setCapturedImage(null)} 
-              variant="outline"
-              className="rounded-full px-6"
-            >
-              Retake
-            </Button>
-            <Button 
-              onClick={handleUpload} 
-              disabled={isUploading}
-              className="rounded-full px-6 bg-black hover:bg-gray-800"
-            >
-              Process Image
-            </Button>
-          </>
-        ) : (
+      {/* Controls - Positioned below camera view */}
+      <div className="p-6 flex flex-col items-center space-y-4">
+        {!capturedImage ? (
           <Button 
             onClick={capturePhoto} 
             className="rounded-full h-16 w-16 flex items-center justify-center bg-white border-4 border-black"
@@ -223,6 +206,25 @@ const CameraView = () => {
               <Camera className="h-6 w-6 text-white" />
             </div>
           </Button>
+        ) : (
+          <div className="flex flex-col items-center space-y-4 w-full">
+            <div className="flex justify-center space-x-4 w-full">
+              <Button 
+                onClick={() => setCapturedImage(null)} 
+                variant="outline"
+                className="rounded-full px-6 w-1/2"
+              >
+                Retake
+              </Button>
+              <Button 
+                onClick={handleUpload} 
+                disabled={isUploading}
+                className="rounded-full px-6 bg-black hover:bg-gray-800 w-1/2"
+              >
+                Do Magic
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>
