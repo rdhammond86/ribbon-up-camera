@@ -5,7 +5,7 @@ import CameraButton from '@/components/CameraButton';
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-6 bg-[#FEF7CD]">
+    <div className="min-h-screen flex flex-col justify-center items-center p-6 bg-[#fffbe2]">
       <div className="w-full max-w-md mx-auto text-center">
         <CameraIcon />
         

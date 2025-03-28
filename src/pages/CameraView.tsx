@@ -92,9 +92,9 @@ const CameraView = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FEF7CD]">
+    <div className="min-h-screen flex flex-col bg-[#fffbe2]">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 bg-[#FEF7CD]">
+      <div className="flex justify-between items-center p-4 bg-[#fffbe2]">
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-6 w-6" />
         </Button>
