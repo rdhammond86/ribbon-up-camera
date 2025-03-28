@@ -22,15 +22,29 @@ const CameraView = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imageId, setImageId] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const navigate = useNavigate();
 
   const startCamera = async () => {
     try {
+      setIsSwitchingCamera(true);
+      
       // Stop any existing stream
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
+        setStream(null);
       }
 
+      // Clear video source
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject = null;
+      }
+
+      // Small delay to ensure previous stream is fully stopped
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log(`Attempting to start camera with facingMode: ${facingMode}`);
+      
       // Request high-resolution camera stream with current facingMode
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
@@ -43,10 +57,14 @@ const CameraView = () => {
         audio: false 
       });
       
+      console.log("Camera stream obtained successfully");
       setStream(mediaStream);
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        videoRef.current.onloadedmetadata = () => {
+          console.log(`Video dimensions: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`);
+        };
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
@@ -55,6 +73,8 @@ const CameraView = () => {
         description: "Could not access your camera. Please check permissions.",
         variant: "destructive",
       });
+    } finally {
+      setIsSwitchingCamera(false);
     }
   };
 
@@ -69,7 +89,14 @@ const CameraView = () => {
     };
   }, [facingMode]); // Restart camera when facingMode changes
 
-  const switchCamera = () => {
+  const switchCamera = async () => {
+    if (isSwitchingCamera) return;
+    
+    toast({
+      title: "Switching Camera",
+      description: "Changing to " + (facingMode === "user" ? "back" : "front") + " camera..."
+    });
+    
     setFacingMode(prevMode => prevMode === "user" ? "environment" : "user");
   };
 
@@ -266,10 +293,15 @@ const CameraView = () => {
         {!capturedImage && (
           <Button 
             onClick={switchCamera}
+            disabled={isSwitchingCamera}
             className="absolute top-4 right-4 rounded-full h-12 w-12 bg-black/30 backdrop-blur-sm hover:bg-black/50"
             size="icon"
           >
-            <RefreshCw className="h-6 w-6 text-white" />
+            {isSwitchingCamera ? (
+              <Loader2 className="h-6 w-6 text-white animate-spin" />
+            ) : (
+              <RefreshCw className="h-6 w-6 text-white" />
+            )}
           </Button>
         )}
       </div>
