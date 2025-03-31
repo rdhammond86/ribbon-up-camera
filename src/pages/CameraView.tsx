@@ -1,9 +1,9 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Camera, Loader2, Upload, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, Upload } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { 
   requestSignedUrl, 
@@ -12,104 +12,63 @@ import {
   getFileTypeFromDataURL,
   resizeImage
 } from '@/services/awsService';
+import { Camera as CapacitorCamera, CameraResultType, CameraSource, Photo } from '@capacitor/camera';
 
 const CameraView = () => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imageId, setImageId] = useState<string | null>(null);
-  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
-  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const navigate = useNavigate();
 
-  const startCamera = async () => {
+  // Initialize camera permissions
+  const initializeCamera = async () => {
     try {
-      setIsSwitchingCamera(true);
-      
-      if (stream) {
-        stream.getTracks().forEach(track => {
-          track.stop();
-        });
-        setStream(null);
-      }
-
-      if (videoRef.current && videoRef.current.srcObject) {
-        videoRef.current.srcObject = null;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      console.log(`Attempting to start camera with facingMode: ${facingMode}`);
-      
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: facingMode }, 
-        audio: false 
-      });
-      
-      console.log("Camera stream obtained successfully");
-      setStream(mediaStream);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
+      await CapacitorCamera.requestPermissions();
     } catch (error) {
-      console.error("Error accessing camera:", error);
+      console.error("Error requesting camera permissions:", error);
       toast({
         title: "Camera Error",
         description: "Could not access your camera. Please check permissions.",
         variant: "destructive",
       });
-    } finally {
-      setIsSwitchingCamera(false);
     }
   };
 
-  useEffect(() => {
-    startCamera();
+  // Request permissions when component mounts
+  React.useEffect(() => {
+    initializeCamera();
+  }, []);
 
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+  const takePicture = async () => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+      });
+
+      if (image && image.dataUrl) {
+        // Process and store the captured image
+        setCapturedImage(image.dataUrl);
+        
+        const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
+        savedImages.push(image.dataUrl);
+        localStorage.setItem('carImages', JSON.stringify(savedImages));
+
+        toast({
+          title: "Photo Captured",
+          description: "Your car photo has been saved!",
+        });
       }
-    };
-  }, [facingMode]);
-
-  const switchCamera = () => {
-    if (isSwitchingCamera) return;
-    
-    toast({
-      title: "Switching Camera",
-      description: "Changing to " + (facingMode === "user" ? "back" : "front") + " camera..."
-    });
-    
-    setFacingMode(prevMode => prevMode === "user" ? "environment" : "user");
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      context?.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-      setCapturedImage(imageDataUrl);
-
-      const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
-      savedImages.push(imageDataUrl);
-      localStorage.setItem('carImages', JSON.stringify(savedImages));
-
+    } catch (error) {
+      console.error("Error taking picture:", error);
       toast({
-        title: "Photo Captured",
-        description: "Your car photo has been saved!",
+        title: "Camera Error",
+        description: "Failed to capture image.",
+        variant: "destructive",
       });
     }
   };
@@ -226,6 +185,47 @@ const CameraView = () => {
     fileInputRef.current?.click();
   };
 
+  const selectFromGallery = async () => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Photos,
+      });
+
+      if (image && image.dataUrl) {
+        try {
+          const resizedImage = await resizeImage(image.dataUrl, 1920, 1024);
+          setCapturedImage(resizedImage);
+          
+          const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
+          savedImages.push(resizedImage);
+          localStorage.setItem('carImages', JSON.stringify(savedImages));
+
+          toast({
+            title: "Image Selected",
+            description: "Your image has been loaded and resized successfully!",
+          });
+        } catch (error) {
+          console.error("Error resizing gallery image:", error);
+          setCapturedImage(image.dataUrl);
+          toast({
+            title: "Image Selected",
+            description: "Your image has been loaded (could not resize).",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error selecting from gallery:", error);
+      toast({
+        title: "Gallery Error",
+        description: "Failed to select image from gallery.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSaveAndExit = () => {
     if (capturedImage) {
       navigate('/');
@@ -251,22 +251,20 @@ const CameraView = () => {
       </div>
 
       <div className="flex-1 relative">
-        {!capturedImage ? (
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            className="w-full h-full object-cover"
-          />
-        ) : (
+        {capturedImage ? (
           <img 
             src={capturedImage} 
             alt="Captured" 
             className="w-full h-full object-cover" 
           />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
+            <div className="text-center p-4">
+              <Camera className="h-16 w-16 mx-auto mb-4" />
+              <p className="text-xl">Press the camera button below to take a photo</p>
+            </div>
+          </div>
         )}
-        
-        <canvas ref={canvasRef} className="hidden"></canvas>
         
         <input 
           type="file"
@@ -275,21 +273,6 @@ const CameraView = () => {
           accept="image/*"
           onChange={handleFileUpload}
         />
-
-        {!capturedImage && (
-          <Button 
-            onClick={switchCamera}
-            disabled={isSwitchingCamera}
-            className="absolute top-4 right-4 rounded-full h-12 w-12 bg-black/30 backdrop-blur-sm hover:bg-black/50"
-            size="icon"
-          >
-            {isSwitchingCamera ? (
-              <Loader2 className="h-6 w-6 text-white animate-spin" />
-            ) : (
-              <RefreshCw className="h-6 w-6 text-white" />
-            )}
-          </Button>
-        )}
       </div>
 
       {isUploading && (
@@ -305,9 +288,9 @@ const CameraView = () => {
 
       <div className="p-6 flex flex-col items-center space-y-4">
         {!capturedImage ? (
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <Button 
-              onClick={handleUploadButtonClick}
+              onClick={selectFromGallery}
               className="rounded-full h-16 w-16 flex items-center justify-center bg-white border-4 border-black"
             >
               <div className="rounded-full h-12 w-12 bg-black flex items-center justify-center">
@@ -316,11 +299,11 @@ const CameraView = () => {
             </Button>
             
             <Button 
-              onClick={capturePhoto} 
-              className="rounded-full h-16 w-16 flex items-center justify-center bg-white border-4 border-black"
+              onClick={takePicture} 
+              className="rounded-full h-20 w-20 flex items-center justify-center bg-white border-4 border-black"
             >
-              <div className="rounded-full h-12 w-12 bg-black flex items-center justify-center">
-                <Camera className="h-6 w-6 text-white" />
+              <div className="rounded-full h-16 w-16 bg-black flex items-center justify-center">
+                <Camera className="h-8 w-8 text-white" />
               </div>
             </Button>
           </div>
