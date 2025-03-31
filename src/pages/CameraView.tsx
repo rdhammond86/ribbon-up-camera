@@ -263,7 +263,7 @@ const CameraView = () => {
           <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
             <div className="text-center p-4">
               <Camera className="h-16 w-16 mx-auto mb-4" />
-              <p className="text-xl">Take a photo or upload an image</p>
+              <p className="text-xl">Press the camera button below to take a photo</p>
             </div>
           </div>
         )}
