@@ -1,6 +1,6 @@
 
-import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, Camera, Loader2, Upload } from 'lucide-react';
@@ -12,15 +12,23 @@ import {
   getFileTypeFromDataURL,
   resizeImage
 } from '@/services/awsService';
-import { Camera as CapacitorCamera, CameraResultType, CameraSource, Photo } from '@capacitor/camera';
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 const CameraView = () => {
+  const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imageId, setImageId] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Check if an image was passed from the index page
+  useEffect(() => {
+    if (location.state && location.state.capturedImage) {
+      setCapturedImage(location.state.capturedImage);
+    }
+  }, [location.state]);
 
   // Initialize camera permissions
   const initializeCamera = async () => {

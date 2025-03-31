@@ -4,12 +4,44 @@ import { useNavigate } from 'react-router-dom';
 import CameraIcon from '@/components/CameraIcon';
 import { Button } from '@/components/ui/button';
 import { Camera } from 'lucide-react';
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const navigate = useNavigate();
 
-  const handleOpenCamera = () => {
-    navigate('/camera');
+  const handleOpenCamera = async () => {
+    try {
+      // Request camera permissions
+      await CapacitorCamera.requestPermissions();
+      
+      // Open the camera directly
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+      });
+
+      if (image && image.dataUrl) {
+        // Save the image to localStorage
+        const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
+        savedImages.push(image.dataUrl);
+        localStorage.setItem('carImages', JSON.stringify(savedImages));
+
+        // Navigate to camera page with the captured image
+        navigate('/camera', { state: { capturedImage: image.dataUrl } });
+      }
+    } catch (error) {
+      console.error("Error opening camera:", error);
+      toast({
+        title: "Camera Error",
+        description: "Failed to open camera. Navigating to camera screen.",
+        variant: "destructive",
+      });
+      // If camera fails, still navigate to the camera page as fallback
+      navigate('/camera');
+    }
   };
 
   return (
