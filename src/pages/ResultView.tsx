@@ -32,17 +32,17 @@ const ResultView = () => {
     console.log("Starting to poll for image with ID:", imageId);
     
     // Setup polling interval reference to clear it on timeout
-    let pollingInterval: NodeJS.Timeout;
+    let pollingInterval: NodeJS.Timeout | null = null;
     
     // Setup timeout for 20 seconds
     const timeoutId = setTimeout(() => {
       setTimeoutError(true);
       setIsLoading(false);
       // Clear the polling interval when timeout occurs
-      clearInterval(pollingInterval);
+      if (pollingInterval) clearInterval(pollingInterval);
       toast({
         title: "Processing Timeout",
-        description: "Ryan's code is too slow. Please try again later.",
+        description: "Image processing timed out. Please try again later.",
         variant: "destructive",
       });
     }, 20000); // 20 seconds
@@ -54,7 +54,10 @@ const ResultView = () => {
         const result = await pollForResult(imageId);
         
         if (result) {
-          clearTimeout(timeoutId); // Clear the timeout if we get a result
+          // Clear both the timeout and polling interval when we get a result
+          clearTimeout(timeoutId);
+          if (pollingInterval) clearInterval(pollingInterval);
+          
           console.log("Received processed image URL:", result);
           setProcessedImageUrl(result);
           setIsLoading(false);
@@ -66,7 +69,10 @@ const ResultView = () => {
           // For demo purposes, after a few polling attempts, 
           // just use the original image as the "processed" result
           if (pollingCount >= 2) {
-            clearTimeout(timeoutId); // Clear the timeout if we stop polling
+            // Clear both the timeout and polling interval
+            clearTimeout(timeoutId);
+            if (pollingInterval) clearInterval(pollingInterval);
+            
             console.log("Max polling attempts reached, using original image");
             setProcessedImageUrl(originalImage);
             setIsLoading(false);
@@ -80,8 +86,10 @@ const ResultView = () => {
           }
         }
       } catch (error) {
-        clearTimeout(timeoutId); // Clear the timeout on error
-        clearInterval(pollingInterval); // Also clear polling interval on error
+        // Clear both the timeout and polling interval on error
+        clearTimeout(timeoutId);
+        if (pollingInterval) clearInterval(pollingInterval);
+        
         console.error("Error checking result:", error);
         toast({
           title: "Error",
@@ -96,8 +104,8 @@ const ResultView = () => {
     pollingInterval = setInterval(checkResult, 3000);
 
     return () => {
-      clearTimeout(timeoutId); // Clear the timeout on cleanup
-      clearInterval(pollingInterval); // Clear the polling interval on cleanup
+      clearTimeout(timeoutId);
+      if (pollingInterval) clearInterval(pollingInterval);
     };
   }, [imageId, navigate, pollingCount, originalImage]);
 
