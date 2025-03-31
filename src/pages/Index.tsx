@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import CameraIcon from '@/components/CameraIcon';
 import { Button } from '@/components/ui/button';
 import { Camera, Upload } from 'lucide-react';
@@ -15,6 +16,7 @@ import {
 
 const Index = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -113,9 +115,13 @@ const Index = () => {
 
   const handleAction = () => {
     if (isNativeMobile()) {
+      // Use native camera on mobile apps
       handleNativeCamera();
+    } else if (isMobile) {
+      // For mobile browsers, still use the file input but styled as camera
+      fileInputRef.current?.click();
     } else {
-      // Trigger file input click for web
+      // For desktop browsers
       fileInputRef.current?.click();
     }
   };
@@ -159,8 +165,8 @@ const Index = () => {
                 </>
               ) : (
                 <>
-                  {isNativeMobile() ? <Camera className="h-5 w-5" /> : <Upload className="h-5 w-5" />}
-                  <span>Ribbon up my car</span>
+                  {isNativeMobile() || isMobile ? <Camera className="h-5 w-5" /> : <Upload className="h-5 w-5" />}
+                  <span>{isNativeMobile() ? "Take a Photo" : isMobile ? "Use Camera" : "Upload Photo"}</span>
                 </>
               )}
             </Button>
