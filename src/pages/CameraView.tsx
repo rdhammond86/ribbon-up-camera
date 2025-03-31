@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,6 @@ const CameraView = () => {
     try {
       setIsSwitchingCamera(true);
       
-      // Stop any existing stream
       if (stream) {
         stream.getTracks().forEach(track => {
           track.stop();
@@ -38,17 +36,14 @@ const CameraView = () => {
         setStream(null);
       }
 
-      // Clear video source
       if (videoRef.current && videoRef.current.srcObject) {
         videoRef.current.srcObject = null;
       }
 
-      // Small delay to ensure previous stream is fully stopped
       await new Promise(resolve => setTimeout(resolve, 200));
       
       console.log(`Attempting to start camera with facingMode: ${facingMode}`);
       
-      // Use a simpler camera configuration - focusing on making switching work
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: facingMode }, 
         audio: false 
@@ -75,13 +70,12 @@ const CameraView = () => {
   useEffect(() => {
     startCamera();
 
-    // Cleanup function to stop camera when component unmounts
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [facingMode]); // Restart camera when facingMode changes
+  }, [facingMode]);
 
   const switchCamera = () => {
     if (isSwitchingCamera) return;
@@ -100,18 +94,14 @@ const CameraView = () => {
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
 
-      // Match canvas dimensions to video
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
-      // Draw the current video frame on the canvas
       context?.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Convert canvas to data URL with high quality (1.0)
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
       setCapturedImage(imageDataUrl);
 
-      // Save to localStorage (temporary solution)
       const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
       savedImages.push(imageDataUrl);
       localStorage.setItem('carImages', JSON.stringify(savedImages));
@@ -141,18 +131,11 @@ const CameraView = () => {
     setUploadProgress(10);
 
     try {
-      // First resize the image
-      setUploadProgress(20);
-      console.log("Resizing image...");
-      const resizedImage = await resizeImage(capturedImage, 1920, 1024);
       setUploadProgress(30);
       
-      // Get file type from data URL
-      const fileType = getFileTypeFromDataURL(resizedImage);
-      // Generate a random file name
+      const fileType = getFileTypeFromDataURL(capturedImage);
       const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
       
-      // Step 1: Request signed URL
       setUploadProgress(40);
       console.log(`Requesting signed URL for ${fileName}, type ${fileType}`);
       const response = await requestSignedUrl(fileName, fileType);
@@ -165,8 +148,7 @@ const CameraView = () => {
       
       setImageId(response.imageId);
       
-      // Step 2: Upload image to signed URL
-      const imageBlob = dataURLToBlob(resizedImage);
+      const imageBlob = dataURLToBlob(capturedImage);
       console.log(`Uploading image blob: size ${imageBlob.size}, type ${imageBlob.type}`);
       setUploadProgress(70);
       
@@ -179,11 +161,10 @@ const CameraView = () => {
       
       setUploadProgress(100);
       
-      // Navigate to result page with the image ID
       navigate('/result', { 
         state: { 
           imageId: response.imageId,
-          originalImage: resizedImage // Send the resized image as original for preview
+          originalImage: capturedImage
         } 
       });
       
@@ -209,11 +190,9 @@ const CameraView = () => {
       const result = e.target?.result as string;
       if (result) {
         try {
-          // Resize the uploaded image too
           const resizedImage = await resizeImage(result, 1920, 1024);
           setCapturedImage(resizedImage);
           
-          // Save to localStorage (temporary solution)
           const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
           savedImages.push(resizedImage);
           localStorage.setItem('carImages', JSON.stringify(savedImages));
@@ -224,7 +203,6 @@ const CameraView = () => {
           });
         } catch (error) {
           console.error("Error resizing uploaded image:", error);
-          // Fall back to original image if resizing fails
           setCapturedImage(result);
           toast({
             title: "Image Selected",
@@ -249,7 +227,6 @@ const CameraView = () => {
 
   const handleSaveAndExit = () => {
     if (capturedImage) {
-      // Here you could add more logic for saving if needed
       navigate('/');
     } else {
       toast({
@@ -262,7 +239,6 @@ const CameraView = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fffbe2]">
-      {/* Header */}
       <div className="flex justify-between items-center p-4 bg-[#fffbe2]">
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-6 w-6" />
@@ -273,7 +249,6 @@ const CameraView = () => {
         </Button>
       </div>
 
-      {/* Camera View */}
       <div className="flex-1 relative">
         {!capturedImage ? (
           <video 
@@ -292,7 +267,6 @@ const CameraView = () => {
         
         <canvas ref={canvasRef} className="hidden"></canvas>
         
-        {/* Hidden file input */}
         <input 
           type="file"
           ref={fileInputRef}
@@ -301,7 +275,6 @@ const CameraView = () => {
           onChange={handleFileUpload}
         />
 
-        {/* Camera switch button - only show when camera is active */}
         {!capturedImage && (
           <Button 
             onClick={switchCamera}
@@ -318,7 +291,6 @@ const CameraView = () => {
         )}
       </div>
 
-      {/* Upload Progress */}
       {isUploading && (
         <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center">
           <Loader2 className="h-12 w-12 text-white animate-spin mb-4" />
@@ -330,7 +302,6 @@ const CameraView = () => {
         </div>
       )}
 
-      {/* Controls - Positioned below camera view */}
       <div className="p-6 flex flex-col items-center space-y-4">
         {!capturedImage ? (
           <div className="flex items-center space-x-4">
