@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,7 @@ const ResultView = () => {
     // Setup polling interval reference to clear it on timeout
     let pollingInterval: NodeJS.Timeout | null = null;
     
-    // Setup timeout for 20 seconds
+    // Setup timeout for 40 seconds (increased from 20 seconds)
     const timeoutId = setTimeout(() => {
       setTimeoutError(true);
       setIsLoading(false);
@@ -45,7 +44,7 @@ const ResultView = () => {
         description: "Image processing timed out. Please try again later.",
         variant: "destructive",
       });
-    }, 20000); // 20 seconds
+    }, 40000); // 40 seconds (increased from 20 seconds)
 
     const checkResult = async () => {
       try {
