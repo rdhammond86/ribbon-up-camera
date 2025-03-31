@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import CameraIcon from '@/components/CameraIcon';
 import { Button } from '@/components/ui/button';
-import { Camera } from 'lucide-react';
+import { Camera, Upload } from 'lucide-react';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { toast } from '@/hooks/use-toast';
 import { 
@@ -16,13 +16,15 @@ import {
 const Index = () => {
   const navigate = useNavigate();
   const [isUploading, setIsUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const isWebEnvironment = () => {
-    // Check if we're running in a web browser without native capabilities
-    return !window.Capacitor || window.Capacitor.platform === 'web';
+  const isNativeMobile = () => {
+    return typeof window !== 'undefined' && 
+           window.hasOwnProperty('Capacitor') && 
+           window['Capacitor']?.isNativePlatform();
   };
 
-  const processImage = async (imageDataUrl) => {
+  const processImage = async (imageDataUrl: string) => {
     setIsUploading(true);
     
     try {
@@ -64,67 +66,28 @@ const Index = () => {
     }
   };
 
-  const handleWebCamera = async () => {
-    try {
-      // For web browsers, use the browser's camera API
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      
-      // Create video and canvas elements
-      const video = document.createElement('video');
-      video.srcObject = stream;
-      video.style.display = 'none';
-      document.body.appendChild(video);
-      
-      // Wait for video to start playing
-      await new Promise((resolve) => {
-        video.onloadedmetadata = () => {
-          video.play();
-          resolve();
-        };
-      });
-      
-      // Create canvas to capture the image
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      
-      // Draw the current video frame to the canvas
-      const context = canvas.getContext('2d');
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // Get the image as data URL
-      const imageDataUrl = canvas.toDataURL('image/jpeg');
-      
-      // Clean up
-      stream.getTracks().forEach(track => track.stop());
-      video.remove();
-      canvas.remove();
-      
-      // Save the image to localStorage
-      const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
-      savedImages.push(imageDataUrl);
-      localStorage.setItem('carImages', JSON.stringify(savedImages));
-      
-      // Process the image
-      await processImage(imageDataUrl);
-      
-    } catch (error) {
-      console.error("Error using web camera:", error);
-      toast({
-        title: "Camera Error",
-        description: "Failed to access camera. Please check your camera permissions.",
-        variant: "destructive",
-      });
-      setIsUploading(false);
-    }
+  // Handle file selection for web
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const imageDataUrl = e.target?.result as string;
+      if (imageDataUrl) {
+        // Save the image to localStorage
+        const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
+        savedImages.push(imageDataUrl);
+        localStorage.setItem('carImages', JSON.stringify(savedImages));
+        
+        // Process the image
+        await processImage(imageDataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleOpenCamera = async () => {
-    if (isWebEnvironment()) {
-      handleWebCamera();
-      return;
-    }
-    
+  const handleNativeCamera = async () => {
     try {
       // Request camera permissions
       await CapacitorCamera.requestPermissions();
@@ -157,6 +120,15 @@ const Index = () => {
     }
   };
 
+  const handleAction = () => {
+    if (isNativeMobile()) {
+      handleNativeCamera();
+    } else {
+      // Trigger file input click for web
+      fileInputRef.current?.click();
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#fffbe2]">
       <div className="w-full flex-grow-0 flex-shrink-0">
@@ -170,8 +142,17 @@ const Index = () => {
           <p className="text-lg mb-12 text-gray-800">Time for some Motorway Magic, give your car the touch of class it deserves</p>
           
           <div className="space-y-4">
+            {/* Hidden file input for web */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
             <Button 
-              onClick={handleOpenCamera}
+              onClick={handleAction}
               disabled={isUploading}
               className="bg-black hover:bg-gray-800 text-white rounded-full py-6 px-8 w-full max-w-md mx-auto flex items-center justify-center gap-2 transition-all duration-300 shadow-lg"
             >
@@ -182,7 +163,7 @@ const Index = () => {
                 </>
               ) : (
                 <>
-                  <Camera className="h-5 w-5" />
+                  {isNativeMobile() ? <Camera className="h-5 w-5" /> : <Upload className="h-5 w-5" />}
                   <span>Ribbon up my car</span>
                 </>
               )}
