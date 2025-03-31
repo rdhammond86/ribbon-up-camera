@@ -6,9 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Camera } from 'lucide-react';
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { toast } from '@/hooks/use-toast';
+import { 
+  requestSignedUrl, 
+  uploadToSignedUrl,
+  dataURLToBlob,
+  getFileTypeFromDataURL
+} from '@/services/awsService';
 
 const Index = () => {
   const navigate = useNavigate();
+  const [isUploading, setIsUploading] = React.useState(false);
 
   const handleOpenCamera = async () => {
     try {
@@ -29,18 +36,56 @@ const Index = () => {
         savedImages.push(image.dataUrl);
         localStorage.setItem('carImages', JSON.stringify(savedImages));
 
-        // Navigate to camera page with the captured image
-        navigate('/camera', { state: { capturedImage: image.dataUrl } });
+        // Process the image
+        setIsUploading(true);
+        
+        try {
+          const fileType = getFileTypeFromDataURL(image.dataUrl);
+          const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
+          
+          console.log(`Requesting signed URL for ${fileName}, type ${fileType}`);
+          const response = await requestSignedUrl(fileName, fileType);
+          console.log("Received signed URL response:", response);
+          
+          if (!response || !response.signedUrl || !response.imageId) {
+            throw new Error("Invalid response from server");
+          }
+          
+          const imageBlob = dataURLToBlob(image.dataUrl);
+          console.log(`Uploading image blob: size ${imageBlob.size}, type ${imageBlob.type}`);
+          
+          const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
+          
+          if (!uploadSuccess) {
+            throw new Error("Upload failed");
+          }
+          
+          // Navigate directly to result page with the image ID and original image
+          navigate('/result', { 
+            state: { 
+              imageId: response.imageId,
+              originalImage: image.dataUrl
+            } 
+          });
+          
+        } catch (error) {
+          console.error("Error in upload process:", error);
+          toast({
+            title: "Upload Error",
+            description: "There was a problem uploading your image. Please try again.",
+            variant: "destructive",
+          });
+          setIsUploading(false);
+        }
       }
     } catch (error) {
       console.error("Error opening camera:", error);
       toast({
         title: "Camera Error",
-        description: "Failed to open camera. Navigating to camera screen.",
+        description: "Failed to open camera. Please check your camera permissions.",
         variant: "destructive",
       });
-      // If camera fails, still navigate to the camera page as fallback
-      navigate('/camera');
+      setIsUploading(false);
     }
   };
 
@@ -59,10 +104,20 @@ const Index = () => {
           <div className="space-y-4">
             <Button 
               onClick={handleOpenCamera}
+              disabled={isUploading}
               className="bg-black hover:bg-gray-800 text-white rounded-full py-6 px-8 w-full max-w-md mx-auto flex items-center justify-center gap-2 transition-all duration-300 shadow-lg"
             >
-              <Camera className="h-5 w-5" />
-              <span>Ribbon up my car</span>
+              {isUploading ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="h-5 w-5" />
+                  <span>Ribbon up my car</span>
+                </>
+              )}
             </Button>
             
             <button className="text-gray-600 font-medium py-2 px-4 w-full text-center">
