@@ -17,7 +17,114 @@ const Index = () => {
   const navigate = useNavigate();
   const [isUploading, setIsUploading] = React.useState(false);
 
+  const isWebEnvironment = () => {
+    // Check if we're running in a web browser without native capabilities
+    return !window.Capacitor || window.Capacitor.platform === 'web';
+  };
+
+  const processImage = async (imageDataUrl) => {
+    setIsUploading(true);
+    
+    try {
+      const fileType = getFileTypeFromDataURL(imageDataUrl);
+      const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
+      
+      console.log(`Requesting signed URL for ${fileName}, type ${fileType}`);
+      const response = await requestSignedUrl(fileName, fileType);
+      console.log("Received signed URL response:", response);
+      
+      if (!response || !response.signedUrl || !response.imageId) {
+        throw new Error("Invalid response from server");
+      }
+      
+      const imageBlob = dataURLToBlob(imageDataUrl);
+      console.log(`Uploading image blob: size ${imageBlob.size}, type ${imageBlob.type}`);
+      
+      const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
+      
+      if (!uploadSuccess) {
+        throw new Error("Upload failed");
+      }
+      
+      // Navigate directly to result page with the image ID and original image
+      navigate('/result', { 
+        state: { 
+          imageId: response.imageId,
+          originalImage: imageDataUrl
+        } 
+      });
+    } catch (error) {
+      console.error("Error in upload process:", error);
+      toast({
+        title: "Upload Error",
+        description: "There was a problem uploading your image. Please try again.",
+        variant: "destructive",
+      });
+      setIsUploading(false);
+    }
+  };
+
+  const handleWebCamera = async () => {
+    try {
+      // For web browsers, use the browser's camera API
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      
+      // Create video and canvas elements
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.style.display = 'none';
+      document.body.appendChild(video);
+      
+      // Wait for video to start playing
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => {
+          video.play();
+          resolve();
+        };
+      });
+      
+      // Create canvas to capture the image
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Draw the current video frame to the canvas
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Get the image as data URL
+      const imageDataUrl = canvas.toDataURL('image/jpeg');
+      
+      // Clean up
+      stream.getTracks().forEach(track => track.stop());
+      video.remove();
+      canvas.remove();
+      
+      // Save the image to localStorage
+      const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
+      savedImages.push(imageDataUrl);
+      localStorage.setItem('carImages', JSON.stringify(savedImages));
+      
+      // Process the image
+      await processImage(imageDataUrl);
+      
+    } catch (error) {
+      console.error("Error using web camera:", error);
+      toast({
+        title: "Camera Error",
+        description: "Failed to access camera. Please check your camera permissions.",
+        variant: "destructive",
+      });
+      setIsUploading(false);
+    }
+  };
+
   const handleOpenCamera = async () => {
+    if (isWebEnvironment()) {
+      handleWebCamera();
+      return;
+    }
+    
     try {
       // Request camera permissions
       await CapacitorCamera.requestPermissions();
@@ -37,46 +144,7 @@ const Index = () => {
         localStorage.setItem('carImages', JSON.stringify(savedImages));
 
         // Process the image
-        setIsUploading(true);
-        
-        try {
-          const fileType = getFileTypeFromDataURL(image.dataUrl);
-          const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
-          
-          console.log(`Requesting signed URL for ${fileName}, type ${fileType}`);
-          const response = await requestSignedUrl(fileName, fileType);
-          console.log("Received signed URL response:", response);
-          
-          if (!response || !response.signedUrl || !response.imageId) {
-            throw new Error("Invalid response from server");
-          }
-          
-          const imageBlob = dataURLToBlob(image.dataUrl);
-          console.log(`Uploading image blob: size ${imageBlob.size}, type ${imageBlob.type}`);
-          
-          const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
-          
-          if (!uploadSuccess) {
-            throw new Error("Upload failed");
-          }
-          
-          // Navigate directly to result page with the image ID and original image
-          navigate('/result', { 
-            state: { 
-              imageId: response.imageId,
-              originalImage: image.dataUrl
-            } 
-          });
-          
-        } catch (error) {
-          console.error("Error in upload process:", error);
-          toast({
-            title: "Upload Error",
-            description: "There was a problem uploading your image. Please try again.",
-            variant: "destructive",
-          });
-          setIsUploading(false);
-        }
+        await processImage(image.dataUrl);
       }
     } catch (error) {
       console.error("Error opening camera:", error);
