@@ -118,7 +118,7 @@ const Index = () => {
       // Use native camera on mobile apps
       handleNativeCamera();
     } else if (isMobile) {
-      // For mobile browsers, still use the file input but styled as camera
+      // For mobile browsers, use the file input but with capture="environment" to open camera directly
       fileInputRef.current?.click();
     } else {
       // For desktop browsers
@@ -144,11 +144,12 @@ const Index = () => {
           <p className="text-lg mb-12 text-gray-800">Time for some Motorway Magic, give your car the touch of class it deserves</p>
           
           <div className="space-y-4">
-            {/* Hidden file input for web */}
+            {/* File input with camera capture for mobile browsers */}
             <input
               type="file"
               ref={fileInputRef}
               accept="image/*"
+              capture={isMobile ? "environment" : undefined}
               onChange={handleFileSelect}
               className="hidden"
             />
