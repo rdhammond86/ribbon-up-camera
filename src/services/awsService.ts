@@ -142,11 +142,68 @@ const getFileTypeFromDataURL = (dataURL: string): string => {
   return 'image/jpeg'; // Default to JPEG if unable to determine
 };
 
+// New function: Resize image to specified max dimensions
+const resizeImage = (dataUrl: string, maxWidth = 1920, maxHeight = 1024): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      // Calculate new dimensions while maintaining aspect ratio
+      let width = img.width;
+      let height = img.height;
+      
+      // Only resize if the image exceeds maxWidth or maxHeight
+      if (width > maxWidth || height > maxHeight) {
+        const aspectRatio = width / height;
+        
+        if (width > maxWidth) {
+          width = maxWidth;
+          height = width / aspectRatio;
+        }
+        
+        if (height > maxHeight) {
+          height = maxHeight;
+          width = height * aspectRatio;
+        }
+      }
+      
+      // Create canvas for resized image
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Draw resized image on canvas
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Get file type from original data URL
+      const fileType = getFileTypeFromDataURL(dataUrl);
+      
+      // Convert to data URL with quality 0.9 (90%)
+      const resizedDataUrl = canvas.toDataURL(fileType, 0.9);
+      console.log(`Image resized: ${img.width}x${img.height} -> ${width}x${height}`);
+      
+      resolve(resizedDataUrl);
+    };
+    
+    img.onerror = (error) => {
+      reject(error);
+    };
+    
+    img.src = dataUrl;
+  });
+};
+
 export {
   requestSignedUrl,
   uploadToSignedUrl,
   pollForResult,
   dataURLToBlob,
   getFileTypeFromDataURL,
+  resizeImage,
   type SignedUrlResponse
 };

@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,8 @@ import {
   requestSignedUrl, 
   uploadToSignedUrl, 
   dataURLToBlob,
-  getFileTypeFromDataURL
+  getFileTypeFromDataURL,
+  resizeImage
 } from '@/services/awsService';
 
 const CameraView = () => {
@@ -139,17 +141,23 @@ const CameraView = () => {
     setUploadProgress(10);
 
     try {
+      // First resize the image
+      setUploadProgress(20);
+      console.log("Resizing image...");
+      const resizedImage = await resizeImage(capturedImage, 1920, 1024);
+      setUploadProgress(30);
+      
       // Get file type from data URL
-      const fileType = getFileTypeFromDataURL(capturedImage);
+      const fileType = getFileTypeFromDataURL(resizedImage);
       // Generate a random file name
       const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
       
       // Step 1: Request signed URL
-      setUploadProgress(20);
+      setUploadProgress(40);
       console.log(`Requesting signed URL for ${fileName}, type ${fileType}`);
       const response = await requestSignedUrl(fileName, fileType);
       console.log("Received signed URL response:", response);
-      setUploadProgress(40);
+      setUploadProgress(50);
       
       if (!response || !response.signedUrl || !response.imageId) {
         throw new Error("Invalid response from server");
@@ -158,12 +166,12 @@ const CameraView = () => {
       setImageId(response.imageId);
       
       // Step 2: Upload image to signed URL
-      const imageBlob = dataURLToBlob(capturedImage);
+      const imageBlob = dataURLToBlob(resizedImage);
       console.log(`Uploading image blob: size ${imageBlob.size}, type ${imageBlob.type}`);
-      setUploadProgress(60);
+      setUploadProgress(70);
       
       const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
-      setUploadProgress(80);
+      setUploadProgress(90);
       
       if (!uploadSuccess) {
         throw new Error("Upload failed");
@@ -175,7 +183,7 @@ const CameraView = () => {
       navigate('/result', { 
         state: { 
           imageId: response.imageId,
-          originalImage: capturedImage 
+          originalImage: resizedImage // Send the resized image as original for preview
         } 
       });
       
@@ -192,25 +200,37 @@ const CameraView = () => {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const result = e.target?.result as string;
       if (result) {
-        setCapturedImage(result);
-        
-        // Save to localStorage (temporary solution)
-        const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
-        savedImages.push(result);
-        localStorage.setItem('carImages', JSON.stringify(savedImages));
+        try {
+          // Resize the uploaded image too
+          const resizedImage = await resizeImage(result, 1920, 1024);
+          setCapturedImage(resizedImage);
+          
+          // Save to localStorage (temporary solution)
+          const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
+          savedImages.push(resizedImage);
+          localStorage.setItem('carImages', JSON.stringify(savedImages));
 
-        toast({
-          title: "Image Selected",
-          description: "Your image has been loaded successfully!",
-        });
+          toast({
+            title: "Image Selected",
+            description: "Your image has been loaded and resized successfully!",
+          });
+        } catch (error) {
+          console.error("Error resizing uploaded image:", error);
+          // Fall back to original image if resizing fails
+          setCapturedImage(result);
+          toast({
+            title: "Image Selected",
+            description: "Your image has been loaded (could not resize).",
+          });
+        }
       }
     };
     reader.onerror = () => {
