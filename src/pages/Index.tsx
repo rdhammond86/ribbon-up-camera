@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -10,7 +11,8 @@ import {
   requestSignedUrl, 
   uploadToSignedUrl,
   dataURLToBlob,
-  getFileTypeFromDataURL
+  getFileTypeFromDataURL,
+  resizeImage
 } from '@/services/awsService';
 
 const Index = () => {
@@ -30,7 +32,13 @@ const Index = () => {
     setIsUploading(true);
     
     try {
-      const fileType = getFileTypeFromDataURL(imageDataUrl);
+      // Resize and compress the image before uploading
+      const compressedImage = await resizeImage(imageDataUrl, 1280, 720, 0.8);
+      console.log("Original image size vs compressed:", 
+                  Math.round(imageDataUrl.length / 1024), "KB vs", 
+                  Math.round(compressedImage.length / 1024), "KB");
+      
+      const fileType = getFileTypeFromDataURL(compressedImage);
       const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
       
       console.log(`Requesting signed URL for ${fileName}, type ${fileType}`);
@@ -41,7 +49,7 @@ const Index = () => {
         throw new Error("Invalid response from server");
       }
       
-      const imageBlob = dataURLToBlob(imageDataUrl);
+      const imageBlob = dataURLToBlob(compressedImage);
       console.log(`Uploading image blob: size ${imageBlob.size}, type ${imageBlob.type}`);
       
       const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
@@ -53,7 +61,7 @@ const Index = () => {
       navigate('/result', { 
         state: { 
           imageId: response.imageId,
-          originalImage: imageDataUrl
+          originalImage: compressedImage // Use compressed image instead of original
         } 
       });
     } catch (error) {

@@ -1,4 +1,3 @@
-
 /**
  * Service for handling AWS image upload and processing
  */
@@ -142,8 +141,13 @@ const getFileTypeFromDataURL = (dataURL: string): string => {
   return 'image/jpeg'; // Default to JPEG if unable to determine
 };
 
-// New function: Resize image to specified max dimensions
-const resizeImage = (dataUrl: string, maxWidth = 1920, maxHeight = 1024): Promise<string> => {
+// New function: Resize image to specified max dimensions with quality parameter
+const resizeImage = (
+  dataUrl: string, 
+  maxWidth = 1280, 
+  maxHeight = 720, 
+  quality = 0.8
+): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -157,12 +161,12 @@ const resizeImage = (dataUrl: string, maxWidth = 1920, maxHeight = 1024): Promis
         
         if (width > maxWidth) {
           width = maxWidth;
-          height = width / aspectRatio;
+          height = Math.floor(width / aspectRatio);
         }
         
         if (height > maxHeight) {
           height = maxHeight;
-          width = height * aspectRatio;
+          width = Math.floor(height * aspectRatio);
         }
       }
       
@@ -183,9 +187,9 @@ const resizeImage = (dataUrl: string, maxWidth = 1920, maxHeight = 1024): Promis
       // Get file type from original data URL
       const fileType = getFileTypeFromDataURL(dataUrl);
       
-      // Convert to data URL with quality 0.9 (90%)
-      const resizedDataUrl = canvas.toDataURL(fileType, 0.9);
-      console.log(`Image resized: ${img.width}x${img.height} -> ${width}x${height}`);
+      // Convert to data URL with specified quality (0.8 = 80%)
+      const resizedDataUrl = canvas.toDataURL(fileType, quality);
+      console.log(`Image resized and compressed: ${img.width}x${img.height} -> ${width}x${height}, quality: ${quality * 100}%`);
       
       resolve(resizedDataUrl);
     };
