@@ -245,6 +245,8 @@ const CameraView = () => {
           <ArrowLeft className="h-6 w-6" />
         </Button>
         
+        <div className="text-lg font-medium">Ribbon Up Your Car</div>
+        
         <Button variant="ghost" className="text-lg font-medium" onClick={handleSaveAndExit}>
           Save & exit
         </Button>
@@ -261,7 +263,7 @@ const CameraView = () => {
           <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
             <div className="text-center p-4">
               <Camera className="h-16 w-16 mx-auto mb-4" />
-              <p className="text-xl">Press the camera button below to take a photo</p>
+              <p className="text-xl">Take a photo or upload an image</p>
             </div>
           </div>
         )}
@@ -290,7 +292,7 @@ const CameraView = () => {
         {!capturedImage ? (
           <div className="flex items-center space-x-6">
             <Button 
-              onClick={selectFromGallery}
+              onClick={handleUploadButtonClick}
               className="rounded-full h-16 w-16 flex items-center justify-center bg-white border-4 border-black"
             >
               <div className="rounded-full h-12 w-12 bg-black flex items-center justify-center">
@@ -304,6 +306,15 @@ const CameraView = () => {
             >
               <div className="rounded-full h-16 w-16 bg-black flex items-center justify-center">
                 <Camera className="h-8 w-8 text-white" />
+              </div>
+            </Button>
+            
+            <Button 
+              onClick={selectFromGallery}
+              className="rounded-full h-16 w-16 flex items-center justify-center bg-white border-4 border-black"
+            >
+              <div className="rounded-full h-12 w-12 bg-black flex items-center justify-center">
+                <Upload className="h-6 w-6 text-white" />
               </div>
             </Button>
           </div>
