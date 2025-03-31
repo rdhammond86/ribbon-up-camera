@@ -10,8 +10,7 @@ import {
   requestSignedUrl, 
   uploadToSignedUrl,
   dataURLToBlob,
-  getFileTypeFromDataURL,
-  resizeImage
+  getFileTypeFromDataURL
 } from '@/services/awsService';
 
 const Index = () => {
@@ -29,10 +28,8 @@ const Index = () => {
     setIsUploading(true);
     
     try {
-      // Resize image to avoid issues with large files
-      const resizedImage = await resizeImage(imageDataUrl);
-      
-      const fileType = getFileTypeFromDataURL(resizedImage);
+      // Use original image without resizing
+      const fileType = getFileTypeFromDataURL(imageDataUrl);
       const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
       
       console.log(`Requesting signed URL for ${fileName}, type ${fileType}`);
@@ -43,7 +40,7 @@ const Index = () => {
         throw new Error("Invalid response from server");
       }
       
-      const imageBlob = dataURLToBlob(resizedImage);
+      const imageBlob = dataURLToBlob(imageDataUrl);
       console.log(`Uploading image blob: size ${imageBlob.size}, type ${imageBlob.type}`);
       
       const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
@@ -56,7 +53,7 @@ const Index = () => {
       navigate('/result', { 
         state: { 
           imageId: response.imageId,
-          originalImage: resizedImage
+          originalImage: imageDataUrl
         } 
       });
     } catch (error) {
