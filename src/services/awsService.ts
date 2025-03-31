@@ -14,7 +14,7 @@ interface ProcessingResult {
 }
 
 // Base URL for the AWS Lambda service
-const BASE_URL = "https://heyv52hm6lidlkp2c2j3jcpdmi0aeuep.lambda-url.eu-west-1.on.aws";
+const BASE_URL = "https://motorway.slack.com/archives/D069RB1ERMG/p1743429828858499";
 
 // Request a signed URL for uploading images
 const requestSignedUrl = async (fileName: string, fileType: string): Promise<SignedUrlResponse> => {
