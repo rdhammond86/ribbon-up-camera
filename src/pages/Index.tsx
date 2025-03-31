@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -19,6 +18,7 @@ const Index = () => {
   const isMobile = useIsMobile();
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
 
   const isNativeMobile = () => {
     return typeof window !== 'undefined' && 
@@ -30,7 +30,6 @@ const Index = () => {
     setIsUploading(true);
     
     try {
-      // Use original image without resizing
       const fileType = getFileTypeFromDataURL(imageDataUrl);
       const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
       
@@ -51,7 +50,6 @@ const Index = () => {
         throw new Error("Upload failed");
       }
       
-      // Navigate directly to result page with the image ID and original image
       navigate('/result', { 
         state: { 
           imageId: response.imageId,
@@ -69,7 +67,6 @@ const Index = () => {
     }
   };
 
-  // Handle file selection for web
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -78,7 +75,6 @@ const Index = () => {
     reader.onload = async (e) => {
       const imageDataUrl = e.target?.result as string;
       if (imageDataUrl) {
-        // Process the image directly without saving to localStorage
         await processImage(imageDataUrl);
       }
     };
@@ -87,10 +83,8 @@ const Index = () => {
 
   const handleNativeCamera = async () => {
     try {
-      // Request camera permissions
       await CapacitorCamera.requestPermissions();
       
-      // Open the camera directly
       const image = await CapacitorCamera.getPhoto({
         quality: 90,
         allowEditing: false,
@@ -99,7 +93,6 @@ const Index = () => {
       });
 
       if (image && image.dataUrl) {
-        // Process the image directly without saving to localStorage
         await processImage(image.dataUrl);
       }
     } catch (error) {
@@ -113,21 +106,50 @@ const Index = () => {
     }
   };
 
-  const handleAction = () => {
+  const handleNativeGallery = async () => {
+    try {
+      await CapacitorCamera.requestPermissions();
+      
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Photos,
+      });
+
+      if (image && image.dataUrl) {
+        await processImage(image.dataUrl);
+      }
+    } catch (error) {
+      console.error("Error opening gallery:", error);
+      toast({
+        title: "Gallery Error",
+        description: "Failed to open photo gallery. Please check your permissions.",
+        variant: "destructive",
+      });
+      setIsUploading(false);
+    }
+  };
+
+  const handleCameraAction = () => {
     if (isNativeMobile()) {
-      // Use native camera on mobile apps
       handleNativeCamera();
     } else if (isMobile) {
-      // For mobile browsers, use the file input but with capture="environment" to open camera directly
       fileInputRef.current?.click();
     } else {
-      // For desktop browsers
       fileInputRef.current?.click();
     }
   };
 
+  const handleGalleryAction = () => {
+    if (isNativeMobile()) {
+      handleNativeGallery();
+    } else {
+      galleryInputRef.current?.click();
+    }
+  };
+
   const handleSkip = () => {
-    // Navigate to result page without an image
     navigate('/result');
   };
 
@@ -144,7 +166,6 @@ const Index = () => {
           <p className="text-lg mb-12 text-gray-800">Time for some Motorway Magic, give your car the touch of class it deserves</p>
           
           <div className="space-y-4">
-            {/* File input with camera capture for mobile browsers */}
             <input
               type="file"
               ref={fileInputRef}
@@ -154,23 +175,63 @@ const Index = () => {
               className="hidden"
             />
             
-            <Button 
-              onClick={handleAction}
-              disabled={isUploading}
-              className="bg-black hover:bg-gray-800 text-white rounded-full py-6 px-8 w-full max-w-md mx-auto flex items-center justify-center gap-2 transition-all duration-300 shadow-lg"
-            >
-              {isUploading ? (
-                <>
-                  <span className="animate-spin mr-2">⏳</span>
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  {isNativeMobile() || isMobile ? <Camera className="h-5 w-5" /> : <Upload className="h-5 w-5" />}
-                  <span>{isNativeMobile() ? "Take a Photo" : isMobile ? "Use Camera" : "Upload Photo"}</span>
-                </>
-              )}
-            </Button>
+            <input
+              type="file"
+              ref={galleryInputRef}
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
+            {isMobile ? (
+              <div className="flex flex-col space-y-4">
+                <Button 
+                  onClick={handleCameraAction}
+                  disabled={isUploading}
+                  className="bg-black hover:bg-gray-800 text-white rounded-full py-6 px-8 w-full max-w-md mx-auto flex items-center justify-center gap-2 transition-all duration-300 shadow-lg"
+                >
+                  {isUploading ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="h-5 w-5" />
+                      <span>Take a Photo</span>
+                    </>
+                  )}
+                </Button>
+                
+                <Button 
+                  onClick={handleGalleryAction}
+                  disabled={isUploading}
+                  variant="outline"
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full py-4 px-6 w-3/4 mx-auto flex items-center justify-center gap-2 transition-all duration-300 shadow-md"
+                >
+                  <Upload className="h-4 w-4" />
+                  <span>Upload</span>
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                onClick={handleCameraAction}
+                disabled={isUploading}
+                className="bg-black hover:bg-gray-800 text-white rounded-full py-6 px-8 w-full max-w-md mx-auto flex items-center justify-center gap-2 transition-all duration-300 shadow-lg"
+              >
+                {isUploading ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-5 w-5" />
+                    <span>Upload Photo</span>
+                  </>
+                )}
+              </Button>
+            )}
             
             <button 
               onClick={handleSkip} 
