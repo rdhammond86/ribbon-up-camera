@@ -149,10 +149,6 @@ const Index = () => {
     }
   };
 
-  const handleSkip = () => {
-    navigate('/result');
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-[#fffbe2]">
       <div className="w-full flex-grow-0 flex-shrink-0">
@@ -232,13 +228,6 @@ const Index = () => {
                 )}
               </Button>
             )}
-            
-            <button 
-              onClick={handleSkip} 
-              className="text-gray-600 font-medium py-2 px-4 w-full text-center"
-            >
-              Skip for now
-            </button>
           </div>
         </div>
       </div>
