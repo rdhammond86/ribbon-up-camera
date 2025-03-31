@@ -10,7 +10,8 @@ import {
   requestSignedUrl, 
   uploadToSignedUrl,
   dataURLToBlob,
-  getFileTypeFromDataURL
+  getFileTypeFromDataURL,
+  resizeImage
 } from '@/services/awsService';
 
 const Index = () => {
@@ -28,7 +29,10 @@ const Index = () => {
     setIsUploading(true);
     
     try {
-      const fileType = getFileTypeFromDataURL(imageDataUrl);
+      // Resize image to avoid issues with large files
+      const resizedImage = await resizeImage(imageDataUrl);
+      
+      const fileType = getFileTypeFromDataURL(resizedImage);
       const fileName = `car-${Date.now()}.${fileType.split('/')[1] || 'jpg'}`;
       
       console.log(`Requesting signed URL for ${fileName}, type ${fileType}`);
@@ -39,7 +43,7 @@ const Index = () => {
         throw new Error("Invalid response from server");
       }
       
-      const imageBlob = dataURLToBlob(imageDataUrl);
+      const imageBlob = dataURLToBlob(resizedImage);
       console.log(`Uploading image blob: size ${imageBlob.size}, type ${imageBlob.type}`);
       
       const uploadSuccess = await uploadToSignedUrl(response.signedUrl, imageBlob);
@@ -52,7 +56,7 @@ const Index = () => {
       navigate('/result', { 
         state: { 
           imageId: response.imageId,
-          originalImage: imageDataUrl
+          originalImage: resizedImage
         } 
       });
     } catch (error) {
@@ -75,12 +79,7 @@ const Index = () => {
     reader.onload = async (e) => {
       const imageDataUrl = e.target?.result as string;
       if (imageDataUrl) {
-        // Save the image to localStorage
-        const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
-        savedImages.push(imageDataUrl);
-        localStorage.setItem('carImages', JSON.stringify(savedImages));
-        
-        // Process the image
+        // Process the image directly without saving to localStorage
         await processImage(imageDataUrl);
       }
     };
@@ -101,12 +100,7 @@ const Index = () => {
       });
 
       if (image && image.dataUrl) {
-        // Save the image to localStorage
-        const savedImages = JSON.parse(localStorage.getItem('carImages') || '[]');
-        savedImages.push(image.dataUrl);
-        localStorage.setItem('carImages', JSON.stringify(savedImages));
-
-        // Process the image
+        // Process the image directly without saving to localStorage
         await processImage(image.dataUrl);
       }
     } catch (error) {
@@ -127,6 +121,11 @@ const Index = () => {
       // Trigger file input click for web
       fileInputRef.current?.click();
     }
+  };
+
+  const handleSkip = () => {
+    // Navigate to result page without an image
+    navigate('/result');
   };
 
   return (
@@ -169,7 +168,10 @@ const Index = () => {
               )}
             </Button>
             
-            <button className="text-gray-600 font-medium py-2 px-4 w-full text-center">
+            <button 
+              onClick={handleSkip} 
+              className="text-gray-600 font-medium py-2 px-4 w-full text-center"
+            >
               Skip for now
             </button>
           </div>
